@@ -21,6 +21,7 @@ CHANNELS_IMG = 3
 L1_LAMBDA = 100
 LAMBDA_GP = 10
 
+print(DEVICE)
 
 
 def train(disc, gen, loader, opti_disc, opti_gen, l1_loss, criterion, g_scaler, d_scaler):
