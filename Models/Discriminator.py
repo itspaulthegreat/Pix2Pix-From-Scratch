@@ -3,7 +3,7 @@ import torch.nn as nn
 import torchvision
 
 class Discriminator(nn.Module):
-    def __init__(self,in_channels,features = [64,128,256,512]):
+    def __init__(self,in_channels=3,features = [64,128,256,512]):
         super(Discriminator,self).__init__()
         layers = []
         self.initial = nn.Sequential(

@@ -3,7 +3,7 @@ import torch.nn as nn
 
 class Block(nn.Module):
     def __init__(self,in_channels,out_channels,encode=True,act= "relu",dropout = False):
-        super(self,Block).__init__()
+        super(Block,self).__init__()
 
         self.Conv =  nn.Sequential(
             nn.Conv2d(in_channels,out_channels,4,2,1,padding_mode="reflect",bias=False) if encode else nn.ConvTranspose2d(in_channels,out_channels,4,2,1,bias=False),
@@ -13,6 +13,7 @@ class Block(nn.Module):
 
         self.use_dropout = dropout
         self.Dropout  = nn.Dropout(0.5)
+        self.encode = encode
     def forward(self,x):
         x = self.Conv(x)
         return self.Dropout(x) if self.use_dropout else x
@@ -43,12 +44,12 @@ class Generator(nn.Module):
         self.up2 = Block(features*8*2,features*8,encode=False,act= "relu",dropout = True)
         self.up3 = Block(features*8*2,features*8,encode=False,act= "relu",dropout = True)
         self.up4 = Block(features*8*2,features*8,encode=False,act= "relu",dropout = True)
-        self.up5 = Block(features*8*2,features*8,encode=False,act= "relu",dropout = True)
-        self.up6 = Block(features*8*2,features*4,encode=False,act= "relu",dropout = True)
-        self.up7 = Block(features*4*2,features*2,encode=False,act= "relu",dropout = True)
+        self.up5 = Block(features*8*2,features*4,encode=False,act= "relu",dropout = True)
+        self.up6 = Block(features*4*2,features*2,encode=False,act= "relu",dropout = True)
+        self.up7 = Block(features*2*2,features,encode=False,act= "relu",dropout = True)
 
         self.final = nn.Sequential(
-            nn.ConvTranspose2d(features*2*2,features,4,2,1),
+            nn.ConvTranspose2d(features*2,in_channels,4,2,1),
             nn.Tanh()
         )
        
@@ -71,3 +72,15 @@ class Generator(nn.Module):
         up7 = self.up7(torch.concat([up6,d2],dim=1))
         final = self.final(torch.concat([up7,d1],dim=1))
         return final
+    
+
+def test_gen():
+    x = torch.randn((1, 3, 256, 256))
+    model = Generator(in_channels=3, features=64)
+    preds = model(x)
+    print(preds.shape)
+
+    
+
+if __name__ == "__main__":
+    test_gen()
