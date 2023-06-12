@@ -21,38 +21,35 @@ CHANNELS_IMG = 3
 L1_LAMBDA = 100
 LAMBDA_GP = 10
 
-print(DEVICE)
 
 
-def train(disc, gen, loader, opti_disc, opti_gen, l1_loss, criterion, g_scaler, d_scaler):
-    loop = tqdm(loader, leave=True)
+
+def train(disc, gen, loader, opti_disc, opti_gen, l1_loss, criterion):
+    # loop = tqdm(loader, leave=True)
     for batch_idx, (x,y) in enumerate(loader):
         x = x.to(DEVICE)
         y = y.to(DEVICE)
-
-        with torch.cuda.amp.autocast():
-            y_fake = gen(x)
-            disc_real = disc(x,y)
-            disc_lossreal = criterion(disc_real,torch.ones_like(disc_real))
-            disc_fake = disc(x,y_fake)
-            disc_lossfake = criterion(disc_fake,torch.zeros_like(disc_fake))
-            disc_loss = (disc_lossreal+disc_lossfake)/2
+        
+       
+        y_fake = gen(x)
+        disc_real = disc(x,y)
+        disc_lossreal = criterion(disc_real,torch.ones_like(disc_real))
+        disc_fake = disc(x,y_fake)
+        disc_lossfake = criterion(disc_fake,torch.zeros_like(disc_fake))
+        disc_loss = (disc_lossreal+disc_lossfake)/2
         
         disc.zero_grad()
-        d_scaler.scale(disc_loss).backward()
-        d_scaler.step(opti_disc)
-        d_scaler.update()
-
-        with torch.cuda.amp.autocast():
-            gen_fake = gen(x)
-            disc_fake = disc(x,gen_fake)
-            L1 = l1_loss(y_fake, y) * L1_LAMBDA
-            gen_loss = criterion(disc_fake, torch.ones_like(disc_fake))
+        disc_loss.backward()
+        opti_disc.step()
+   
+        gen_fake = gen(x)
+        disc_fake = disc(x,gen_fake)
+        L1 = l1_loss(y_fake, y) * L1_LAMBDA
+        gen_loss = criterion(disc_fake, torch.ones_like(disc_fake))
 
         gen.zero_grad()
-        g_scaler.scale(gen_loss).backward()
-        g_scaler.step(opti_gen)
-        g_scaler.update()
+        gen_loss.backward()
+        opti_gen.step()
         
         
 def main():
@@ -79,8 +76,7 @@ def main():
                             batch_size=BATCH_SIZE,
                             num_workers=NUM_WORKERS
                             )
-    g_scaler = torch.cuda.amp.GradScaler()
-    d_scaler = torch.cuda.amp.GradScaler()
+   
 
     val_dataset = MapDataset(root_dir = Config.VAL_DIR)
     val_dataloader = DataLoader(
@@ -90,7 +86,7 @@ def main():
                             )
     
     for epoch in range(NUM_EPOCHS):
-        train(disc, gen, train_dataloader, opti_disc, opti_gen, L1_LOSS, criterion, g_scaler, d_scaler)
+        train(disc, gen, train_dataloader, opti_disc, opti_gen, L1_LOSS, criterion)
 
     if Config.SAVE_MODEL and epoch % 5 == 0:
             save_checkpoint(gen, opti_gen, filename=Config.CHECKPOINT_GEN)
@@ -98,5 +94,6 @@ def main():
 
     save_some_examples(gen, val_dataloader, epoch, folder="evaluation")
     
-    if __name__ == "__main__":
-        main()
+
+if __name__ == "__main__":
+    main()
