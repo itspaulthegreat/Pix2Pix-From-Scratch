@@ -21,11 +21,11 @@ CHANNELS_IMG = 3
 L1_LAMBDA = 100
 LAMBDA_GP = 10
 
-
+print(torch.cuda.is_available())
 
 
 def train(disc, gen, loader, opti_disc, opti_gen, l1_loss, criterion):
-    # loop = tqdm(loader, leave=True)
+    loop = tqdm(loader, leave=True)
     for batch_idx, (x,y) in enumerate(loader):
         x = x.to(DEVICE)
         y = y.to(DEVICE)
@@ -51,9 +51,14 @@ def train(disc, gen, loader, opti_disc, opti_gen, l1_loss, criterion):
         gen_loss.backward()
         opti_gen.step()
         
+        if batch_idx % 10 == 0:
+            loop.set_postfix(
+                D_real=torch.sigmoid(disc_real).mean().item(),
+                D_fake=torch.sigmoid(disc_fake).mean().item(),
+            )
         
 def main():
-
+    
     disc = Discriminator(in_channels=3).to(DEVICE)
     gen = Generator(in_channels=3,features=64).to(DEVICE)
     opti_disc = optim.Adam(disc.parameters(),lr=LR,betas=(0.5,0.999))
